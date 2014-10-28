@@ -1551,3 +1551,11 @@ class InvalidWatchdogAction(Invalid):
 class NoBlockMigrationForConfigDriveInLibVirt(NovaException):
     msg_fmt = _("Block migration of instances with config drives is not "
                 "supported in libvirt.")
+
+
+class NparNotFound(NotFound):
+    msg_fmt = _("Npar record %(npar) could not be found.")
+
+
+class VparNotFound(NotFound):
+    msg_fmt = _("Vpar %(vpar) could not be found.")

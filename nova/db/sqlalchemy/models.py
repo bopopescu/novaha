@@ -1395,3 +1395,22 @@ class PciDevice(BASE, NovaBase):
                             primaryjoin='and_('
                             'PciDevice.instance_uuid == Instance.uuid,'
                             'PciDevice.deleted == 0)')
+
+
+class NParResource(BASE, NovaBase):
+    """Represents nPar resource."""
+
+    __tablename__ = "nPar_resource"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ip_addr = Column(String(255), nullable=False)
+    memory = Column(Integer, nullable=True)
+    memory_used = Column(Integer, nullable=True)
+    vcpus = Column(Integer, nullable=True)
+    vcpus_used = Column(Integer)
+    disk = Column(Integer, nullable=True)
+    disk_used = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=timeutils.utcnow)
+    updated_at = Column(DateTime, onupdate=timeutils.utcnow)
+    deleted_at = Column(DateTime)
+    deleted = Column(String(36), default="")

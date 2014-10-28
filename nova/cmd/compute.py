@@ -35,6 +35,7 @@ from nova import utils
 from nova import version
 
 CONF = cfg.CONF
+CONF.import_opt('compute_driver', 'nova.virt.driver')
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
 
@@ -63,7 +64,9 @@ def main():
     gmr.TextGuruMeditation.setup_autorun(version)
 
     if not CONF.conductor.use_local:
-        block_db_access()
+        # NOTE(Sunny): For HPUXDriver, allow compute to access db directly.
+        if CONF.compute_driver != 'hpux.HPUXDriver':
+            block_db_access()
         objects_base.NovaObject.indirection_api = \
             conductor_rpcapi.ConductorAPI()
 

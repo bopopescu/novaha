@@ -1506,6 +1506,11 @@ class API(base.Base):
             except exception.ComputeHostNotFound:
                 pass
 
+            # NOTE(Sunny): For HPUXDriver, ignore the variable "is_up".
+            if CONF.compute_driver == 'hpux.HPUXDriver':
+                is_up = True
+                cb(context, instance, bdms, reservations=reservations)
+
             if not is_up:
                 # If compute node isn't up, just delete from DB
                 self._local_delete(context, instance, bdms, delete_type, cb)

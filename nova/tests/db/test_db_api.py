@@ -7172,3 +7172,73 @@ class RetryOnDeadlockTestCase(test.TestCase):
                 raise db_exc.DBDeadlock("fake exception")
             return True
         self.assertTrue(call_api())
+
+
+class NParResourceTestCase(test.TestCase, ModelsObjectComparatorMixin):
+    _ignored_keys = ['id', 'deleted', 'deleted_at', 'created_at', 'updated_at']
+
+    def setUp(self):
+        super(NParResourceTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
+    def _get_base_values(self):
+        return {
+            'ip_addr': '192.168.0.3',
+            'vcpus': 2,
+            'vcpus_used': 0,
+            'memory': 2048,
+            'memory_used': 1024,
+            'disk': 100,
+            'disk_used': 100
+        }
+
+    def _create_npar_resource(self, values):
+        v = self._get_base_values()
+        v.update(values)
+        return db.npar_resource_create(self.ctxt, v)
+
+    def test_npar_get_all(self):
+        values = [
+            {'ip_addr': '192.168.0.1', 'vcpus': 1},
+            {'ip_addr': '192.168.0.2', 'vcpus': 2},
+        ]
+        nPar_resource = [self._create_npar_resource(vals) for vals in values]
+        real = db.npar_get_all(self.ctxt)
+
+        self._assertEqualListsOfObjects(nPar_resource, real,
+                                        ignored_keys=self._ignored_keys)
+
+    def test_npar_resource_get(self):
+        value = {'id': 9, 'ip_addr': '192.168.0.1', 'vcpus': 1}
+        self._create_npar_resource(value)
+        result = db.npar_resource_get(self.ctxt, 9)
+
+        self.assertEqual(value['id'], result['id'])
+
+    def test_npar_get_by_ip(self):
+        value = {'id': 9, 'ip_addr': '192.168.0.1', 'vcpus': 1}
+        self._create_npar_resource(value)
+        result = db.npar_get_by_ip(self.ctxt, value['ip_addr'])
+
+        self.assertEqual(value['id'], result['id'])
+
+    def test_npar_resource_update(self):
+        value = {'ip_addr': '192.168.0.1', 'vcpus': 3}
+        values = [
+            {'ip_addr': '192.168.0.1', 'vcpus': 1},
+            {'ip_addr': '192.168.0.2', 'vcpus': 2},
+        ]
+
+        result = [self._create_npar_resource(vals) for vals in values]
+        if not result:
+            print("create npar record failed")
+        ret = db.npar_resource_update(self.ctxt, 1, value)
+
+        self.assertEqual(3, ret['vcpus'])
+
+    def test_npar_resource_delete(self):
+        value = {'id': 1, 'ip_addr': '192.168.0.1', 'vcpus': 3}
+        self._create_npar_resource(value)
+        db.npar_resource_delete(self.ctxt, 1)
+        expected = db.npar_get_all(self.ctxt)
+        self.assertEqual(0, len(expected))

@@ -695,6 +695,14 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         # confirm compute_node_stats exists
         db_utils.get_table(engine, 'compute_node_stats')
 
+    #for developing HPUX driver,create following 235 functions.
+    def _check_235(self, engine, data):
+        self.assertColumnExists(engine, 'nPar_resource', 'ip_addr')
+
+    def _post_downgrade_235(self, engine):
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError, db_utils.get_table,
+                          engine, 'nPar_resource')
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

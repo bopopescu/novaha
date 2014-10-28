@@ -6067,3 +6067,67 @@ def pci_device_update(context, node_id, address, values):
         device.update(values)
         session.add(device)
     return device
+
+
+####################
+
+
+@require_context
+def npar_resource_create(context, values):
+    nPar = models.NParResource()
+    nPar.update(values)
+    nPar.save()
+    return nPar
+
+
+@require_admin_context
+def npar_get_all(context):
+    result = model_query(context, models.NParResource).all()
+    return result
+
+
+def _npar_id_get(context, npar_id, session=None):
+    result = model_query(context, models.NParResource, session=session).\
+            filter_by(id=npar_id).\
+            first()
+    if not result:
+        raise exception.NparNotFound(npar=npar_id)
+
+    return result
+
+
+@require_admin_context
+def npar_resource_get(context, npar_id):
+    return _npar_id_get(context, npar_id)
+
+
+@require_admin_context
+def npar_get_by_ip(context, npar_ip_addr):
+    result = model_query(context, models.NParResource, session=None).\
+            filter_by(ip_addr=npar_ip_addr).\
+            first()
+    return result
+
+
+@require_admin_context
+@_retry_on_deadlock
+def npar_resource_update(context, npar_id, values):
+    session = get_session()
+    with session.begin():
+        npar = _npar_id_get(context, npar_id, session=None)
+        values['updated_at'] = timeutils.utcnow()
+        datetime_keys = ('created_at', 'deleted_at', 'updated_at')
+        convert_objects_related_datetimes(values, *datetime_keys)
+        npar.update(values)
+        npar.save()
+
+    return npar
+
+
+@require_admin_context
+def npar_resource_delete(context, npar_id):
+    ret = model_query(context, models.NParResource, session=None).\
+                      filter_by(id=npar_id).\
+                      soft_delete(synchronize_session=False)
+    if not ret:
+        raise exception.NparNotFound(host=npar_id)

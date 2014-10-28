@@ -1923,3 +1923,34 @@ def archive_deleted_rows_for_table(context, tablename, max_rows=None):
     """
     return IMPL.archive_deleted_rows_for_table(context, tablename,
                                                max_rows=max_rows)
+
+
+####################
+
+
+def npar_resource_create(context, values):
+    """Create a new nPar_resource."""
+    return IMPL.npar_resource_create(context, values)
+
+
+def npar_get_all(context):
+    return IMPL.npar_get_all(context)
+
+
+def npar_resource_get(context, npar_id):
+    return IMPL.npar_resource_get(context, npar_id)
+
+
+def npar_resource_update(context, npar_id, values):
+    """Update the record in DB."""
+    return IMPL.npar_resource_update(context, npar_id, values)
+
+
+def npar_resource_delete(context, npar_id):
+    """Delete the npar record."""
+    return IMPL.npar_resource_delete(context, npar_id)
+
+
+def npar_get_by_ip(context, npar_ip_addr):
+    """Get nPar by ip_addr"""
+    return IMPL.npar_get_by_ip(context, npar_ip_addr)
