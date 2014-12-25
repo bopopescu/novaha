@@ -3642,6 +3642,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         self.ensure_default(context)
         try:
             if name:
+                print(name)
                 return self.db.security_group_get_by_name(context,
                                                           context.project_id,
                                                           name)

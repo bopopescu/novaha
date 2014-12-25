@@ -29,7 +29,6 @@ from oslo import messaging
 from nova import crypto
 from nova import manager
 
-
 class CertManager(manager.Manager):
 
     target = messaging.Target(version='2.0')

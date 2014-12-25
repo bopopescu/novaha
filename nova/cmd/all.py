@@ -67,7 +67,7 @@ def main():
             LOG.exception(_('Failed to load %s') % mod.__name__)
 
     for binary in ['nova-compute', 'nova-network', 'nova-scheduler',
-                   'nova-cert', 'nova-conductor']:
+                   'nova-cert', 'nova-conductor', 'nova-kvmha']:
 
         # FIXME(sirp): Most service configs are defined in nova/service.py, but
         # conductor has set a new precedent of storing these configs

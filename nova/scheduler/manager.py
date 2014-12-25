@@ -209,7 +209,6 @@ class SchedulerManager(manager.Manager):
     # NOTE(hanlind): This method can be removed in v3.0 of the RPC API.
     def show_host_resources(self, context, host):
         """Shows the physical/usage resource given by hosts.
-
         :param context: security context
         :param host: hostname
         :returns:
@@ -282,7 +281,7 @@ class SchedulerManager(manager.Manager):
         and filter_properties.
         """
         dests = self.driver.select_destinations(context, request_spec,
-            filter_properties)
+        					filter_properties)
         hosts = [dest['host'] for dest in dests]
         return jsonutils.to_primitive(hosts)
 
@@ -297,7 +296,6 @@ class SchedulerManager(manager.Manager):
         dests = self.driver.select_destinations(context, request_spec,
             filter_properties)
         return jsonutils.to_primitive(dests)
-
 
 class _SchedulerManagerV3Proxy(object):
 
