@@ -1,4 +1,3 @@
-#
 #    KVM HA in OpenStack (Demo Version)
 #
 #    Copyright HP, Corp. 2014
@@ -19,34 +18,29 @@
 #    under the License.i
 #
 
-import sys
+"""
+Unit Tests for nova.kvmha.rpcapi
+"""
 
 from oslo.config import cfg
+import mock
 
-from nova.compute import utils as compute_utils
-from nova.compute import vm_states
-from nova.conductor import api as conductor_api
-from nova import db
+from nova.kvmha import rpcapi as kvmha_rpcapi
+from nova import context
 from nova import exception
-from nova import notifications
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import importutils
-from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
-from nova import rpc
-from nova import servicegroup
-
-LOG = logging.getLogger(__name__)
+from nova import test
+from nova.tests import fake_instance
 
 CONF = cfg.CONF
+CONF.import_opt('topic', 'nova.kvmha.opts', group='kvmha')
 
-class KVMHA(object):
-    """The base class that all KVMHA classes should inherit from."""
 
-    def __init__(self):
-        self.servicegroup_api = servicegroup.API()
+class KvmhaAPITestCase(test.NoDBTestCase):
+    """Test case for kvmha.api interfaces."""
 
-    def run_periodic_tasks(self, context):
-        """Manager calls this so drivers can perform periodic tasks."""
-        pass
-
+    def setUp(self):
+        super(KvmhaAPITestCase, self).setUp()
+        self.fake_topic = 'fake_topic'
+        self.fake_context = 'fake_context'
+        self.flags(topic=self.fake_topic, enable=True, group='kvmha')
+        self.kvmha_rpcapi = kvmha_rpcapi.KvmhaAPI()

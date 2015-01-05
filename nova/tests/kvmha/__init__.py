@@ -1,4 +1,3 @@
-#
 #    KVM HA in OpenStack (Demo Version)
 #
 #    Copyright HP, Corp. 2014
@@ -18,7 +17,3 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.i
 #
-
-"""
-KVMHA Proxy
-"""
