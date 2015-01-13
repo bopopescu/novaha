@@ -84,6 +84,9 @@ from nova.virt import block_device as driver_block_device
 from nova.virt import event
 from nova.virt import fake
 from nova.volume import cinder
+from novaclient.client import Client
+from keystoneclient.auth.identity import v2
+from keystoneclient import session
 
 
 LOG = logging.getLogger(__name__)
@@ -103,6 +106,9 @@ class KvmhaManager(manager.Manager):
         #self.driver = importutils.import_object(kvmha_driver)
         #self.compute_api = compute.API()
         #print("!!!!!!!!!!!!!!!!!!!!!!!1\n")
+        self.context = context.RequestContext(user_id='admin',
+                                              project_id=None,
+                                              is_admin=True)
         super(KvmhaManager, self).__init__(service_name='kvmha',
                                            *args, **kwargs)
         #print("!!!!!!!!!!!!!!!!!!!!!!!1\n")
@@ -132,7 +138,8 @@ class KvmhaManager(manager.Manager):
             if (service['binary'] == 'nova-compute'):
                 if not [cs for cs in compute_services if cs['host'] == service['host']]:
                     compute_services.append(service)
-        print(compute_services)
+        LOG.debug(_("Current compute services: %s" % compute_services))
+        #print(compute_services)
         for s in compute_services:
             alive = servicegroup_api.service_is_up(s)
             if not alive:
@@ -203,6 +210,16 @@ class KvmhaManager(manager.Manager):
         Evacuate VM(s) on the failure node to target host.
         """
         #available_node = self._lookup_available_node(failure_host)
+
+        # The auth_url hardcode here for now, will be replaced when
+        # porting to Helion OpenStack environment.
+        auth = v2.Password(auth_url='http://localhost:5000/v2.0/',
+                           username='admin',
+                           password='root',
+                           tenant_name='admin')
+        sess = session.Session(auth=auth)
+        nova_evacuate = Client(3, session=sess)
+
         instances_list = self._get_target_instances(failure_host)
         if instances_list:
             for instance in instances_list:
@@ -222,20 +239,32 @@ class KvmhaManager(manager.Manager):
                 #name = instance['display_name']
                 instance_final = compute_api.get(ctxt, instance['id'])
                 check_host = instance_final['host']
-                print("check_host = %s" % check_host)
-                on_shared_storage = False
-                password = None
-                res = compute_api.evacuate(ctxt, instance_final, 'ubuntu', on_shared_storage, password)
+                LOG.audit(_("Checking host: %s") % check_host)
+                #print("check_host = %s" % check_host)
+                #on_shared_storage = False
+                #password = None
+                #res = compute_api.evacuate(self.context.elevated(),
+                #                           instance_final,
+                #                           host='ubuntu',
+                #                           on_shared_storage=False,
+                #                           admin_password=None)
+                res = nova_evacuate.servers.evacuate(instance['uuid'],
+                                                     host='ubuntu',
+                                                     on_shared_storage=False,
+                                                     password=None)
                 if type(res) is dict:
                     utils.print_dict(res)
-                time.sleep(60)
+                time.sleep(15)
+        LOG.audit(_("No instance needs to be evacuated"))
 
     @periodic_task.periodic_task
     def kvmha_proxy_run(self, context, start_time=None):
         """track for periodic task code path."""
-        print("############### kvmha proxy run\n")
+        LOG.audit(_("KVM HA proxy run"))
+        #print("############### kvmha proxy run\n")
         failure_host = self._detect_failure_host2()
         if failure_host:
-            print("#############3 kvmha proxy run: failure host found!\n")
+            LOG.audit(_("Failure host has been found: %s" % failure_host))
+            #print("#############3 kvmha proxy run: failure host found!\n")
             self._evacuate(failure_host)
 
