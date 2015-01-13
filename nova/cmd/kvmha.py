@@ -44,12 +44,7 @@ def main():
 
     gmr.TextGuruMeditation.setup_autorun(version)
 
-    #daemon = kvmha_proxy.MyDaemon('/tmp/daemon-example.pid')
     server = service.Service.create(binary='nova-kvmha', topic=CONF.kvmha_topic)
     service.serve(server)
     service.wait()
-
-
-#if __name__ == "__main__":
-#    main()
 

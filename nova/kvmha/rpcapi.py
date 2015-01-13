@@ -57,8 +57,8 @@ class KvmhaAPI(object):
                                                CONF.upgrade_levels.kvmha)
         self.client = rpc.get_client(target, version_cap=version_cap)
 
-    #def kvmha_test(self, ctxt):
-        #version = self._get_compat_version('2.0', '1.0')
-    #    cctxt = self.client.prepare(version=version)
-    #    return cctxt.call(ctxt, 'kvmha_test')
+    def kvmha_get_version(self, ctxt):
+        version = self._get_compat_version('2.0', '1.0')
+        cctxt = self.client.prepare(version=version)
+        return cctxt.call(ctxt, 'kvmha_get_version')
 

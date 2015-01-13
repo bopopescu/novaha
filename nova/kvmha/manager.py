@@ -122,8 +122,11 @@ class KvmhaManager(manager.Manager):
         super(KvmhaManager, self).__init__(service_name='kvmha',
                                            *args, **kwargs)
 
-    #def init_host(self):
-    #    pass
+    def init_host(self):
+        pass
+
+    def kvmha_get_version(self, context):
+        pass
 
     #@periodic_task.periodic_task(spacing=CONF.detect_host_failure_interval)
     #def kvmha_test(self, context):
