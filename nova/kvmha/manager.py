@@ -1,5 +1,5 @@
 #
-#    KVM HA in OpenStack (Demo Version)
+#    KVM HA in OpenStack
 #
 #    Copyright HP, Corp. 2014
 #
@@ -89,10 +89,24 @@ from keystoneclient.auth.identity import v2
 from keystoneclient import session
 
 
-LOG = logging.getLogger(__name__)
+kvmha_opts = [
+    cfg.StrOpt('kvmha_admin_auth_url',
+               default='http://localhost:5000/v2.0',
+               help='Authorization URL for server evacuate in admin '
+               'context'),
+    cfg.StrOpt('client_version',
+               default=3,
+               help='Client version for authorization'),
+    cfg.StrOpt('password',
+               default='root',
+               help='Password for authorization of keystoneclient session '
+               'Will get from config file, hardcode here for now'),
+    ]
+
 CONF = cfg.CONF
+CONF.register_opts(kvmha_opts)
 
-
+LOG = logging.getLogger(__name__)
 QUOTAS = quota.QUOTAS
 
 
@@ -105,13 +119,8 @@ class KvmhaManager(manager.Manager):
         #    kvmha_driver = CONF.kvmha_driver
         #self.driver = importutils.import_object(kvmha_driver)
         #self.compute_api = compute.API()
-        #print("!!!!!!!!!!!!!!!!!!!!!!!1\n")
-        self.context = context.RequestContext(user_id='admin',
-                                              project_id=None,
-                                              is_admin=True)
         super(KvmhaManager, self).__init__(service_name='kvmha',
                                            *args, **kwargs)
-        #print("!!!!!!!!!!!!!!!!!!!!!!!1\n")
 
     #def init_host(self):
     #    pass
@@ -121,7 +130,7 @@ class KvmhaManager(manager.Manager):
     #    """KVM HA test"""
     #    print("KVM HA\n")
 
-    def _detect_failure_host2(self):
+    def _detect_failure_host(self):
         """
         Periodicly check in _run() for status of compute hosts.
         Via service status
@@ -139,7 +148,7 @@ class KvmhaManager(manager.Manager):
                 if not [cs for cs in compute_services if cs['host'] == service['host']]:
                     compute_services.append(service)
         LOG.debug(_("Current compute services: %s" % compute_services))
-        #print(compute_services)
+
         for s in compute_services:
             alive = servicegroup_api.service_is_up(s)
             if not alive:
@@ -159,7 +168,7 @@ class KvmhaManager(manager.Manager):
 
     def _sum_instances_memory(self, failure_node):
         """
-        Sumlize the total memory for all of the instances that needs
+        Sumlize the total memory for all of the instances that need
         to be evacuated.
         """
         instances_list = self._get_target_instances(failure_node)
@@ -168,7 +177,6 @@ class KvmhaManager(manager.Manager):
             instance_memory = instance['memory_mb']
             total_memory += instance_memory
 
-        #print("####total_memory = %s\n" % total_memory)
         return total_memory
 
     def _get_hosts(self):
@@ -185,86 +193,113 @@ class KvmhaManager(manager.Manager):
                 hosts.append(service)
         hosts_list = []
         for host in hosts:
-            hosts_list.append(host['host'])
+            hosts_list.append(host['host'].encode("utf-8"))
 
-        #print("@@@hosts_list = %s" % hosts_list)
         return hosts_list
+
+    def _get_available_memory(self, host):
+        """
+        Get available memory of gaven host.
+        """
+        ctxt = context.get_admin_context()
+        service_resource = db.service_get_by_compute_host(ctxt, host)
+        node_resource = service_resource['compute_node'][0]
+        current_memory = node_resource['memory_mb'] - node_resource['memory_mb_used']
+        if current_memory < 0:
+            LOG.exception(_("Failed to get available node resource"))
+        else:
+            return current_memory
 
     def _lookup_available_node(self, failure_node):
         """
         Look up an available compute node. Mainly based on memory.
         """
         host_list = self._get_hosts()
-        target_hosts = host_list.remove(failure_node)
-        target_memory = self._sum_instances_memory(failure_node)
+        #target_hosts = host_list.remove(failure_node)
+        #target_memory = self._sum_instances_memory(failure_node)
 
-        for host in target_hosts:
-            current_memory = _get_available_memory(host)
-            if target_memory < current_memory:
-                return host
+        #for host in target_hosts:
+        #    current_memory = _get_available_memory(host)
+        #    if target_memory < current_memory:
+        #        return host
+        #    else:
+        #        pop_error
+
+        target_memory = self._sum_instances_memory(failure_node)
+        for host in host_list:
+            if host is not failure_node:
+                current_memory = self._get_available_memory(host)
+                if target_memory < current_memory:
+                    return host
+                else:
+                    LOG.exception(_("No available resource"))
             else:
-                pop_error
+                continue
 
     def _evacuate(self, failure_host):
         """
         Evacuate VM(s) on the failure node to target host.
         """
-        #available_node = self._lookup_available_node(failure_host)
+        available_node = self._lookup_available_node(failure_host)
+        if available_node:
 
         # The auth_url hardcode here for now, will be replaced when
         # porting to Helion OpenStack environment.
-        auth = v2.Password(auth_url='http://localhost:5000/v2.0/',
-                           username='admin',
-                           password='root',
-                           tenant_name='admin')
-        sess = session.Session(auth=auth)
-        nova_evacuate = Client(3, session=sess)
+        #auth = v2.Password(auth_url='http://localhost:5000/v2.0/',
+        #                   username='admin',
+        #                   password='root',
+        #                   tenant_name='admin')
 
-        instances_list = self._get_target_instances(failure_host)
-        if instances_list:
-            for instance in instances_list:
+            auth = v2.Password(auth_url=CONF.kvmha_admin_auth_url,
+                               username='admin',
+                               password=CONF.password,
+                               tenant_name='admin')
+            sess = session.Session(auth=auth)
+            nova_evacuate = Client(CONF.client_version, session=sess)
+
+            instances_list = self._get_target_instances(failure_host)
+            if instances_list:
+                for instance in instances_list:
                 # Will point target host when enable shared storage later.
 
-                #print("_evacuate: instance_uuid = %s\n" % instance['uuid'])
-                #os.environ['OS_USERNAME'] = 'admin'
-                #os.environ['OS_PASSWORD'] = 'root'
-                #os.environ['OS_TENANT_NAME'] = 'admin'
-                #os.environ['OS_AUTH_URL'] = "http://localhost:5000/v2.0/"
-                #subprocess.call('source', '')
-                #cmd = ['/usr/local/bin/nova', 'evacuate',
-                       #instance['uuid'], 'ubuntu']
-                #subprocess.call(cmd)
-                ctxt = nova.context.get_admin_context()
-                compute_api = compute.API()
-                #name = instance['display_name']
-                instance_final = compute_api.get(ctxt, instance['id'])
-                check_host = instance_final['host']
-                LOG.audit(_("Checking host: %s") % check_host)
-                #print("check_host = %s" % check_host)
-                #on_shared_storage = False
-                #password = None
-                #res = compute_api.evacuate(self.context.elevated(),
-                #                           instance_final,
-                #                           host='ubuntu',
-                #                           on_shared_storage=False,
-                #                           admin_password=None)
-                res = nova_evacuate.servers.evacuate(instance['uuid'],
-                                                     host='ubuntu',
-                                                     on_shared_storage=False,
-                                                     password=None)
-                if type(res) is dict:
-                    utils.print_dict(res)
-                time.sleep(15)
+                    ctxt = nova.context.get_admin_context()
+                    compute_api = compute.API()
+                    #name = instance['display_name']
+                    instance_final = compute_api.get(ctxt, instance['id'])
+                    check_host = instance_final['host']
+
+                    LOG.audit(_("Checking host: %s") % check_host)
+
+                    #print("check_host = %s" % check_host)
+                    #on_shared_storage = False
+                    #password = None
+                    #res = compute_api.evacuate(self.context.elevated(),
+                    #                           instance_final,
+                    #                           host='ubuntu',
+                    #                           on_shared_storage=False,
+                    #                           admin_password=None)
+
+                    res = nova_evacuate.servers.evacuate(instance['uuid'],
+                                                         host=available_node,
+                                                         on_shared_storage=False,
+                                                         password=None)
+                    if type(res) is dict:
+                        utils.print_dict(res)
+
+                    LOG.audit(_("Instance: %s restarted on host: %s") %
+                              (instance['display_name'], available_node))
+                    time.sleep(15)
+        else:
+            LOG.exception(_("Failed to lookup available node"))
+
         LOG.audit(_("No instance needs to be evacuated"))
 
     @periodic_task.periodic_task
     def kvmha_proxy_run(self, context, start_time=None):
-        """track for periodic task code path."""
+        """Track for periodic task code path."""
         LOG.audit(_("KVM HA proxy run"))
-        #print("############### kvmha proxy run\n")
-        failure_host = self._detect_failure_host2()
+        failure_host = self._detect_failure_host()
         if failure_host:
-            LOG.audit(_("Failure host has been found: %s" % failure_host))
-            #print("#############3 kvmha proxy run: failure host found!\n")
+            LOG.audit(_("Failure host has been detected: %s" % failure_host))
             self._evacuate(failure_host)
 
