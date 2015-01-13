@@ -295,7 +295,7 @@ class KvmhaManager(manager.Manager):
         else:
             LOG.exception(_("Failed to lookup available node"))
 
-        LOG.audit(_("No instance needs to be evacuated"))
+        LOG.audit(_("No instance there needs to be evacuated"))
 
     @periodic_task.periodic_task
     def kvmha_proxy_run(self, context, start_time=None):
