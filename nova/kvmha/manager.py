@@ -294,8 +294,6 @@ class KvmhaManager(manager.Manager):
 
             instances_list = self._get_target_instances(failure_host)
             if instances_list:
-     
-                LOG.audit(_("Checking host: %s") % check_host)
 
                 for instance in instances_list:
                 # Will point target host when enable shared storage later.
@@ -305,6 +303,8 @@ class KvmhaManager(manager.Manager):
                     #name = instance['display_name']
                     instance_final = compute_api.get(ctxt, instance['id'])
                     check_host = instance_final['host']
+
+                    LOG.audit(_("Checking host: %s") % check_host)
 
                     #print("check_host = %s" % check_host)
                     #on_shared_storage = False
