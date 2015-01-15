@@ -114,7 +114,11 @@ class KvmhaManager(manager.Manager):
 
     target = messaging.Target(version='3.23')
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, kvmha_driver=None, *args, **kwargs):
+        # In future we can move the monitor part to kvmha_driver
+        # and have different driver for each way of monitoring,
+        # put it in manager for now.
+
         #if not kvmha_driver:
         #    kvmha_driver = CONF.kvmha_driver
         #self.driver = importutils.import_object(kvmha_driver)
@@ -248,10 +252,10 @@ class KvmhaManager(manager.Manager):
 
         # The auth_url hardcode here for now, will be replaced when
         # porting to Helion OpenStack environment.
-        #auth = v2.Password(auth_url='http://localhost:5000/v2.0/',
-        #                   username='admin',
-        #                   password='root',
-        #                   tenant_name='admin')
+        # auth = v2.Password(auth_url='http://localhost:5000/v2.0/',
+        #                    username='admin',
+        #                    password='root',
+        #                    tenant_name='admin')
 
             auth = v2.Password(auth_url=CONF.kvmha_admin_auth_url,
                                username='admin',
