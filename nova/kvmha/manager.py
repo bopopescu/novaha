@@ -135,16 +135,16 @@ class KvmhaManager(manager.Manager):
     #@periodic_task.periodic_task(spacing=CONF.detect_host_failure_interval)
     #def kvmha_test(self, context):
     #    """KVM HA test"""
-    #    print("KVM HA\n")
 
     def _detect_failure_host(self):
         """
-        Periodicly check in _run() for status of compute hosts.
-        Via service status
+        Periodicly check in kvm_proxy_run() for status of compute hosts.
+        Approach via service status.
 
         Return: Name of the failure compute node if detected.
                 None if everything going fine.
         """
+
         servicegroup_api = servicegroup.API()
         ctxt = context.get_admin_context()
         services = db.service_get_all(ctxt)
@@ -166,10 +166,16 @@ class KvmhaManager(manager.Manager):
     def _get_target_instances(self, host):
         """
         Get VM list running on the target host.
+
+        :param host: the host name where compute node hosted.
+        :returns: An instance list running on the host.
         """
+
         admin_context = context.get_admin_context()
-        instances_list = db.instance_get_all_by_host(admin_context, host,
-                                                     columns_to_join=None, use_slave=False)
+        instances_list = db.instance_get_all_by_host(admin_context,
+                                                     host,
+                                                     columns_to_join=None,
+                                                     use_slave=False)
 
         return instances_list
 
@@ -177,7 +183,12 @@ class KvmhaManager(manager.Manager):
         """
         Sumlize the total memory for all of the instances that need
         to be evacuated.
+
+        :param failure_node: the failure host that has been detected.
+        :returns: Integer as total memory needed by all of the
+                  instances on that host.
         """
+
         instances_list = self._get_target_instances(failure_node)
         total_memory = 0
         for instance in instances_list:
@@ -188,8 +199,11 @@ class KvmhaManager(manager.Manager):
 
     def _get_hosts(self):
         """
-        Return the list of hosts.
+        Get the list of all the hosts.
+
+        :return: a list of all the hosts.
         """
+
         ctxt = context.get_admin_context()
         services = db.service_get_all(ctxt)
         services = availability_zones.set_availability_zones(ctxt, services)
@@ -207,7 +221,12 @@ class KvmhaManager(manager.Manager):
     def _get_available_memory(self, host):
         """
         Get available memory of gaven host.
+
+        :param host: name of the target host.
+        :return: Integer as the current memory available on the
+                 target host.
         """
+
         ctxt = context.get_admin_context()
         service_resource = db.service_get_by_compute_host(ctxt, host)
         node_resource = service_resource['compute_node'][0]
@@ -219,8 +238,13 @@ class KvmhaManager(manager.Manager):
 
     def _lookup_available_node(self, failure_node):
         """
-        Look up an available compute node. Mainly based on memory.
+        Look up an available compute node. Mainly based on memory
+        capability.
+
+        :param failure_node: name of the failure host.
+        :return: string of host name which is selected.
         """
+  
         host_list = self._get_hosts()
         #target_hosts = host_list.remove(failure_node)
         #target_memory = self._sum_instances_memory(failure_node)
@@ -246,7 +270,11 @@ class KvmhaManager(manager.Manager):
     def _evacuate(self, failure_host):
         """
         Evacuate VM(s) on the failure node to target host.
+
+        :param failure_host: name of the failure host.
+        :return: None if everything going fine. 
         """
+
         available_node = self._lookup_available_node(failure_host)
         if available_node:
 
@@ -266,6 +294,9 @@ class KvmhaManager(manager.Manager):
 
             instances_list = self._get_target_instances(failure_host)
             if instances_list:
+     
+                LOG.audit(_("Checking host: %s") % check_host)
+
                 for instance in instances_list:
                 # Will point target host when enable shared storage later.
 
@@ -274,8 +305,6 @@ class KvmhaManager(manager.Manager):
                     #name = instance['display_name']
                     instance_final = compute_api.get(ctxt, instance['id'])
                     check_host = instance_final['host']
-
-                    LOG.audit(_("Checking host: %s") % check_host)
 
                     #print("check_host = %s" % check_host)
                     #on_shared_storage = False
@@ -303,8 +332,12 @@ class KvmhaManager(manager.Manager):
 
     @periodic_task.periodic_task
     def kvmha_proxy_run(self, context, start_time=None):
-        """Track for periodic task code path."""
+        """
+        Track for periodic task code path.
+        """
+
         LOG.audit(_("KVM HA proxy run"))
+
         failure_host = self._detect_failure_host()
         if failure_host:
             LOG.audit(_("Failure host has been detected: %s" % failure_host))
