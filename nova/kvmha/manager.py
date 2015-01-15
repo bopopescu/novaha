@@ -322,7 +322,7 @@ class KvmhaManager(manager.Manager):
                     if type(res) is dict:
                         utils.print_dict(res)
 
-                    LOG.audit(_("Instance: %s restarted on host: %s") %
+                    LOG.audit(_("Instance: %s has been restarted on host: %s") %
                               (instance['display_name'], available_node))
                     time.sleep(15)
         else:
