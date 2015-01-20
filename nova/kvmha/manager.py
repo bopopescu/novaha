@@ -58,6 +58,7 @@ from nova.compute import vm_states
 from nova.conductor import manager as conductor_manager
 from nova.kvmha import rpcapi as kvmha_rpcai
 from nova.kvmha import driver 
+from nova.kvmha import utils as kvmha_utils
 from nova import context
 from nova import db
 from nova import exception
@@ -244,20 +245,6 @@ class KvmhaManager(manager.Manager):
         available_node = self._lookup_available_node(failure_host)
         if available_node:
 
-        # The auth_url hardcode here for now, will be replaced when
-        # porting to Helion OpenStack environment.
-        # auth = v2.Password(auth_url='http://localhost:5000/v2.0/',
-        #                    username='admin',
-        #                    password='root',
-        #                    tenant_name='admin')
-
-            auth = v2.Password(auth_url=CONF.kvmha_admin_auth_url,
-                               username='admin',
-                               password=CONF.password,
-                               tenant_name='admin')
-            sess = session.Session(auth=auth)
-            nova_evacuate = Client(CONF.client_version, session=sess)
-
             instances_list = self._get_target_instances(failure_host)
             if instances_list:
 
@@ -272,14 +259,8 @@ class KvmhaManager(manager.Manager):
 
                     LOG.audit(_("Checking host: %s") % check_host)
 
-                    #print("check_host = %s" % check_host)
-                    #on_shared_storage = False
-                    #password = None
-                    #res = compute_api.evacuate(self.context.elevated(),
-                    #                           instance_final,
-                    #                           host='ubuntu',
-                    #                           on_shared_storage=False,
-                    #                           admin_password=None)
+                    nova_evacuate = kvmha_utils.auth_client(auth_url=CONF.kvmha_admin_auth_url,
+                                                            password=CONF.password) 
 
                     res = nova_evacuate.servers.evacuate(instance['uuid'],
                                                          host=available_node,
