@@ -32,7 +32,6 @@ from nova import test
 from nova.tests import fake_instance
 
 CONF = cfg.CONF
-CONF.import_opt('topic', 'nova.kvmha.opts', group='kvmha')
 
 
 class KvmhaAPITestCase(test.NoDBTestCase):
