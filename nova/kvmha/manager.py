@@ -86,9 +86,6 @@ from nova.virt import block_device as driver_block_device
 from nova.virt import event
 from nova.virt import fake
 from nova.volume import cinder
-from novaclient.client import Client
-from keystoneclient.auth.identity import v2
-from keystoneclient import session
 
 
 kvmha_opts = [
