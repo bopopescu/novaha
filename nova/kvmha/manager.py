@@ -47,7 +47,7 @@ from nova import block_device
 from nova import compute
 from nova import manager
 from nova import servicegroup
-#from nova.compute import api as compute_api
+from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
@@ -57,6 +57,7 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor import manager as conductor_manager
 from nova.kvmha import rpcapi as kvmha_rpcai
+from nova.kvmha import driver 
 from nova import context
 from nova import db
 from nova import exception
@@ -115,14 +116,10 @@ class KvmhaManager(manager.Manager):
     target = messaging.Target(version='3.23')
 
     def __init__(self, kvmha_driver=None, *args, **kwargs):
-        # In future we can move the monitor part to kvmha_driver
-        # and have different driver for each way of monitoring,
-        # put it in manager for now.
+        # Move the monitor part to driver and have different
+        # driver for each way of monitoring.
 
-        #if not kvmha_driver:
-        #    kvmha_driver = CONF.kvmha_driver
-        #self.driver = importutils.import_object(kvmha_driver)
-        #self.compute_api = compute.API()
+        self.driver = driver.load_kvmha_driver(kvmha_driver)
         super(KvmhaManager, self).__init__(service_name='kvmha',
                                            *args, **kwargs)
 
@@ -131,37 +128,6 @@ class KvmhaManager(manager.Manager):
 
     def kvmha_get_version(self, context):
         pass
-
-    #@periodic_task.periodic_task(spacing=CONF.detect_host_failure_interval)
-    #def kvmha_test(self, context):
-    #    """KVM HA test"""
-
-    def _detect_failure_host(self):
-        """
-        Periodicly check in kvm_proxy_run() for status of compute hosts.
-        Approach via service status.
-
-        Return: Name of the failure compute node if detected.
-                None if everything going fine.
-        """
-
-        servicegroup_api = servicegroup.API()
-        ctxt = context.get_admin_context()
-        services = db.service_get_all(ctxt)
-        services = availability_zones.set_availability_zones(ctxt, services)
-        compute_services = []
-        for service in services:
-            if (service['binary'] == 'nova-compute'):
-                if not [cs for cs in compute_services if cs['host'] == service['host']]:
-                    compute_services.append(service)
-        LOG.debug(_("Current compute services: %s" % compute_services))
-
-        for s in compute_services:
-            alive = servicegroup_api.service_is_up(s)
-            if not alive:
-                return s['host']
-
-        return None
 
     def _get_target_instances(self, host):
         """
@@ -338,7 +304,8 @@ class KvmhaManager(manager.Manager):
 
         LOG.audit(_("KVM HA proxy run"))
 
-        failure_host = self._detect_failure_host()
+        #failure_host = self._detect_failure_host()
+        failure_host = self.driver.detect_failure_host()
         if failure_host:
             LOG.audit(_("Failure host has been detected: %s" % failure_host))
             self._evacuate(failure_host)

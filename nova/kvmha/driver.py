@@ -23,30 +23,31 @@ import sys
 
 from oslo.config import cfg
 
-from nova.compute import utils as compute_utils
-from nova.compute import vm_states
-from nova.conductor import api as conductor_api
-from nova import db
-from nova import exception
-from nova import notifications
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
-from nova import rpc
-from nova import servicegroup
+
+
+driver_opts = [
+    cfg.StrOpt('kvmha_driver',
+               default='nova.kvmha.internal_driver',
+               help='Driver to use for monitor host'),
+]
+CONF = cfg.CONF
+CONF.register_opts(driver_opts)
 
 LOG = logging.getLogger(__name__)
 
-CONF = cfg.CONF
 
-class KVMHA(object):
-    """The base class that all KVMHA classes should inherit from."""
+def load_kvmha_driver(kvmha_driver=None):
+    if not kvmha_driver:
+        kvmha_driver = CONF.kvmha_driver
 
-    def __init__(self):
-        self.servicegroup_api = servicegroup.API()
+    if not kvmha_driver:
+        LOG.error(_("KVM HA driver option required, but not specified"))
+        sys.exit(1)
 
-    def run_periodic_tasks(self, context):
-        """Manager calls this so drivers can perform periodic tasks."""
-        pass
+    LOG.info(_("Loading KVM HA driver '%s'") % kvmha_driver)
+
+    return importutils.import_module(kvmha_driver)
 
