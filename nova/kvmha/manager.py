@@ -304,7 +304,6 @@ class KvmhaManager(manager.Manager):
 
         LOG.audit(_("KVM HA proxy run"))
 
-        #failure_host = self._detect_failure_host()
         failure_host = self.driver.detect_failure_host()
         if failure_host:
             LOG.audit(_("Failure host has been detected: %s" % failure_host))
