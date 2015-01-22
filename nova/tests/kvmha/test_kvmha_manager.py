@@ -30,7 +30,6 @@ from oslo.config import cfg
 import nova
 from nova import context
 from nova import exception
-#from nova.kvmha import manager as kvmha_manager
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import test
@@ -44,6 +43,7 @@ LOG = logging.getLogger(__name__)
 
 
 class KvmhaTestCase(test.TestCase):
+
     def setUp(self):
         super(KvmhaTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
@@ -56,3 +56,35 @@ class KvmhaTestCase(test.TestCase):
         get_target_instances.return_value = fake_instances
         res = self.kvmha._get_target_instances(fake_host)
         self.assertEqual(fake_instances, res)
+
+    @mock.patch('nova.kvmha.manager.KvmhaManager._sum_instances_memory')
+    def test_sum_instances_memory(self, sum_instances_memory):
+        fake_host = 'fake-host'
+        fake_memory = 1024
+        sum_instances_memory.return_value = fake_memory
+        total_memory = self.kvmha._sum_instances_memory(fake_host)
+        self.assertEqual(fake_memory, total_memory)
+
+    @mock.patch('nova.kvmha.manager.KvmhaManager._get_hosts')
+    def test_get_hosts(self, get_hosts):
+        fake_hosts = ['fake1', 'fake2']
+        get_hosts.return_value = fake_hosts
+        host_list = self.kvmha._get_hosts()
+        self.assertEqual(host_list, fake_hosts)
+
+    @mock.patch('nova.kvmha.manager.KvmhaManager._get_available_memory')
+    def test_get_available_memory(self, get_available_memory):
+        fake_host = 'fake-host'
+        fake_memory = 1024
+        get_available_memory.return_value = fake_memory
+        current_memory = self.kvmha._get_available_memory(fake_host)
+        self.assertEqual(current_memory, fake_memory)
+
+    @mock.patch('nova.kvmha.manager.KvmhaManager._lookup_available_node')
+    def test_lookup_available_node(self, lookup_available_node):
+        fake_host = 'fake-host'
+        expected_host = 'expected_host'
+        lookup_available_node.return_value = expected_host
+        target_host = self.kvmha._lookup_available_node(fake_host)
+        self.assertEqual(expected_host, target_host)
+
