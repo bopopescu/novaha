@@ -58,7 +58,6 @@ from nova.compute import vm_states
 from nova.conductor import manager as conductor_manager
 from nova.kvmha import rpcapi as kvmha_rpcai
 from nova.kvmha import driver 
-from nova.kvmha import utils as kvmha_utils
 from nova import context
 from nova import db
 from nova import exception
@@ -239,6 +238,11 @@ class KvmhaManager(manager.Manager):
         :return: None if everything going fine. 
         """
 
+        # NOTE: we do the import here otherwise we get import error
+        # (novaclient not found) issues between the nova and nova
+        # client, which will lead to a failure running for our kvmha
+        # test cases.
+        from nova.kvmha import utils as kvmha_utils
         available_node = self._lookup_available_node(failure_host)
         if available_node:
 
