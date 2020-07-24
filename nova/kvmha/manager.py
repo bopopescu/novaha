@@ -138,7 +138,7 @@ class KvmhaManager(manager.Manager):
         instances_list = db.instance_get_all_by_host(admin_context,
                                                      host,
                                                      columns_to_join=None,
-                                                     use_slave=False)
+                                                     use_subordinate=False)
 
         return instances_list
 
